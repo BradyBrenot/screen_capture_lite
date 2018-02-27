@@ -157,6 +157,8 @@ namespace Screen_Capture {
         virtual bool isPaused() const = 0;
         // Will resume all capturing if paused, otherwise has no effect
         virtual void resume() = 0;
+
+        virtual void setMipLevel(int level) = 0;
     };
 
     template <typename CAPTURECALLBACK> class ICaptureConfiguration {

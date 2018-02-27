@@ -128,6 +128,8 @@ namespace Screen_Capture {
             Thread_Data_->ScreenCaptureData.MouseTimer = std::make_shared<Timer<long long, std::milli>>(50ms);
             Thread_Data_->WindowCaptureData.FrameTimer = std::make_shared<Timer<long long, std::milli>>(100ms);
             Thread_Data_->WindowCaptureData.MouseTimer = std::make_shared<Timer<long long, std::milli>>(50ms);
+            Thread_Data_->ScreenCaptureData.MipLevel = 1;
+            Thread_Data_->WindowCaptureData.MipLevel = 1;
         }
         virtual ~ScreenCaptureManager()
         {
@@ -179,6 +181,12 @@ namespace Screen_Capture {
         virtual void pause() override { Thread_Data_->CommonData_.Paused = true; }
         virtual bool isPaused() const override { return Thread_Data_->CommonData_.Paused; }
         virtual void resume() override { Thread_Data_->CommonData_.Paused = false; }
+
+        virtual void setMipLevel(int level) override
+        {
+            Thread_Data_->ScreenCaptureData.MipLevel = level;
+            Thread_Data_->WindowCaptureData.MipLevel = level;
+        }
     };
 
     class ScreenCaptureConfiguration : public ICaptureConfiguration<ScreenCaptureCallback> {

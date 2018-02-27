@@ -17,7 +17,10 @@ namespace SL {
         class DXFrameProcessor: public BaseFrameProcessor {
             Microsoft::WRL::ComPtr<ID3D11Device> Device;
             Microsoft::WRL::ComPtr<ID3D11DeviceContext> DeviceContext;
+
+            Microsoft::WRL::ComPtr<ID3D11Texture2D> FullFrame;
             Microsoft::WRL::ComPtr<ID3D11Texture2D> StagingSurf;
+            Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ShaderResource;
 
             Microsoft::WRL::ComPtr<IDXGIOutputDuplication> OutputDuplication;
             DXGI_OUTPUT_DESC OutputDesc;

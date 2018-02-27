@@ -320,6 +320,33 @@ namespace Screen_Capture {
             return ProcessFailure(nullptr, L"Failed to QI for ID3D11Texture2D from acquired IDXGIResource in DUPLICATIONMANAGER", L"Error", hr);
         }
 
+        int ReducedHeight = Height(SelectedMonitor) / (std::pow(2, Data->ScreenCaptureData.MipLevel - 1));
+        int ReducedWidth = Width(SelectedMonitor) / (std::pow(2, Data->ScreenCaptureData.MipLevel - 1));
+
+        if (!FullFrame) {
+            D3D11_TEXTURE2D_DESC ThisDesc = { 0 };
+            aquireddesktopimage->GetDesc(&ThisDesc);
+            D3D11_TEXTURE2D_DESC StagingDesc;
+            StagingDesc = ThisDesc;
+            StagingDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+            StagingDesc.Usage = D3D11_USAGE_DEFAULT;
+            StagingDesc.CPUAccessFlags = 0;
+            StagingDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+            StagingDesc.Height = Height(SelectedMonitor);
+            StagingDesc.Width = Width(SelectedMonitor);
+            StagingDesc.MipLevels = Data->ScreenCaptureData.MipLevel;
+
+            hr = Device->CreateTexture2D(&StagingDesc, nullptr, FullFrame.GetAddressOf());
+            if (FAILED(hr)) {
+                return ProcessFailure(Device.Get(), L"Failed to create staging texture for move rects", L"Error", hr,
+                    SystemTransitionsExpectedErrors);
+            }
+        }
+
+        if (!ShaderResource) {
+            Device->CreateShaderResourceView(FullFrame.Get(), nullptr, ShaderResource.GetAddressOf());
+        }
+
         if (!StagingSurf) {
             D3D11_TEXTURE2D_DESC ThisDesc = {0};
             aquireddesktopimage->GetDesc(&ThisDesc);
@@ -329,8 +356,8 @@ namespace Screen_Capture {
             StagingDesc.Usage = D3D11_USAGE_STAGING;
             StagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
             StagingDesc.MiscFlags = 0;
-            StagingDesc.Height = Height(SelectedMonitor);
-            StagingDesc.Width = Width(SelectedMonitor);
+            StagingDesc.Height = ReducedHeight;
+            StagingDesc.Width = ReducedWidth;
 
             hr = Device->CreateTexture2D(&StagingDesc, nullptr, StagingSurf.GetAddressOf());
             if (FAILED(hr)) {
@@ -339,7 +366,23 @@ namespace Screen_Capture {
             }
         }
         if (Width(currentmonitorinfo) == Width(SelectedMonitor) && Height(currentmonitorinfo) == Height(SelectedMonitor)) {
-            DeviceContext->CopyResource(StagingSurf.Get(), aquireddesktopimage.Get());
+            //DeviceContext->CopyResource(FullFrame.Get(), aquireddesktopimage.Get());
+            
+            D3D11_BOX sourceRegion;
+            sourceRegion.left = OffsetX(SelectedMonitor) - OutputDesc.DesktopCoordinates.left;
+            sourceRegion.right = sourceRegion.left + Width(SelectedMonitor);
+            sourceRegion.top = OffsetY(SelectedMonitor) + OutputDesc.DesktopCoordinates.top;
+            sourceRegion.bottom = sourceRegion.top + Height(SelectedMonitor);
+            sourceRegion.front = 0;
+            sourceRegion.back = 1;
+
+            DeviceContext->CopySubresourceRegion(FullFrame.Get(), 0, 0, 0, 0, aquireddesktopimage.Get(), 0, &sourceRegion);
+
+            DeviceContext->GenerateMips(ShaderResource.Get());
+            sourceRegion.right /= Data->ScreenCaptureData.MipLevel;
+            sourceRegion.bottom /= Data->ScreenCaptureData.MipLevel;
+
+            DeviceContext->CopySubresourceRegion(StagingSurf.Get(), 0, 0, 0, 0, FullFrame.Get(), Data->ScreenCaptureData.MipLevel - 1, &sourceRegion);
         }
         else {
             D3D11_BOX sourceRegion;
@@ -365,11 +408,11 @@ namespace Screen_Capture {
         ImageRect ret = {0};
         ret.left = 0;
         ret.top = 0;
-        ret.bottom = Height(SelectedMonitor);
-        ret.right = Width(SelectedMonitor);
+        ret.bottom = ReducedHeight;
+        ret.right = ReducedWidth;
         auto startsrc = reinterpret_cast<unsigned char *>(MappingDesc.pData);
 
-        auto rowstride = PixelStride * Width(SelectedMonitor);
+        auto rowstride = PixelStride * ReducedWidth;
 
         if (Data->ScreenCaptureData.OnNewFrame && !Data->ScreenCaptureData.OnFrameChanged) {
             auto wholeimg = Create(ret, PixelStride, static_cast<int>(MappingDesc.RowPitch) - rowstride, startsrc);
@@ -378,10 +421,10 @@ namespace Screen_Capture {
         else {
             auto startdst = NewImageBuffer.get();
             if (rowstride == static_cast<int>(MappingDesc.RowPitch)) { // no need for multiple calls, there is no padding here
-                memcpy(startdst, startsrc, rowstride * Height(SelectedMonitor));
+                memcpy(startdst, startsrc, rowstride * ReducedHeight);
             }
             else {
-                for (auto i = 0; i < Height(SelectedMonitor); i++) {
+                for (auto i = 0; i < ReducedHeight; i++) {
                     memcpy(startdst + (i * rowstride), startsrc + (i * MappingDesc.RowPitch), rowstride);
                 }
             }
