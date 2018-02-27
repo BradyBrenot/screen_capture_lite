@@ -341,6 +341,8 @@ namespace Screen_Capture {
                 return ProcessFailure(Device.Get(), L"Failed to create staging texture for move rects", L"Error", hr,
                     SystemTransitionsExpectedErrors);
             }
+
+            FullFrame->SetEvictionPriority(DXGI_RESOURCE_PRIORITY_MAXIMUM);
         }
 
         if (!ShaderResource) {
@@ -364,6 +366,8 @@ namespace Screen_Capture {
                 return ProcessFailure(Device.Get(), L"Failed to create staging texture for move rects", L"Error", hr,
                                       SystemTransitionsExpectedErrors);
             }
+
+            StagingSurf->SetEvictionPriority(DXGI_RESOURCE_PRIORITY_MAXIMUM);
         }
         if (Width(currentmonitorinfo) == Width(SelectedMonitor) && Height(currentmonitorinfo) == Height(SelectedMonitor)) {
             //DeviceContext->CopyResource(FullFrame.Get(), aquireddesktopimage.Get());
