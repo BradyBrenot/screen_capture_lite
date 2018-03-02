@@ -373,18 +373,18 @@ namespace Screen_Capture {
             //DeviceContext->CopyResource(FullFrame.Get(), aquireddesktopimage.Get());
             
             D3D11_BOX sourceRegion;
-            sourceRegion.left = OffsetX(SelectedMonitor) - OutputDesc.DesktopCoordinates.left;
-            sourceRegion.right = sourceRegion.left + Width(SelectedMonitor);
-            sourceRegion.top = OffsetY(SelectedMonitor) + OutputDesc.DesktopCoordinates.top;
-            sourceRegion.bottom = sourceRegion.top + Height(SelectedMonitor);
+            sourceRegion.left = 0;
+            sourceRegion.right = Width(SelectedMonitor);
+            sourceRegion.top = 0;
+            sourceRegion.bottom = Height(SelectedMonitor);
             sourceRegion.front = 0;
             sourceRegion.back = 1;
 
             DeviceContext->CopySubresourceRegion(FullFrame.Get(), 0, 0, 0, 0, aquireddesktopimage.Get(), 0, &sourceRegion);
 
             DeviceContext->GenerateMips(ShaderResource.Get());
-            sourceRegion.right /= Data->ScreenCaptureData.MipLevel;
-            sourceRegion.bottom /= Data->ScreenCaptureData.MipLevel;
+            sourceRegion.right = sourceRegion.left + ReducedWidth;
+            sourceRegion.bottom = sourceRegion.top + ReducedHeight;
 
             DeviceContext->CopySubresourceRegion(StagingSurf.Get(), 0, 0, 0, 0, FullFrame.Get(), Data->ScreenCaptureData.MipLevel - 1, &sourceRegion);
         }
